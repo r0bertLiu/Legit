@@ -11,3 +11,5 @@ sample usage:
 $ legit-init
 - Initialized empty legit repository in .legit
 ```
+
+legit-add *filename*: this command adds the contents of one or more files to the "_index_"
