@@ -8,6 +8,6 @@ This project realized a subset of the version control system Git based on POSIX-
 legit-init: create initial files or directories inside .legit
 sample usage: 
 ```
-$ legit-init
-> Initialized empty legit repository in .legit
+~$ legit-init
+Initialized empty legit repository in .legit
 ```
