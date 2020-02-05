@@ -1,0 +1,129 @@
+#!/bin/dash
+
+
+# check .legit directory
+if ! test -d .legit
+then
+	echo "legit-commit: error: no .legit directory containing legit repository exists"
+	exit
+fi
+
+# check usage
+have_a=0
+if [ "$#" -eq 2 ] # 2 arg (-m msg)
+then
+	if test "$1" != "-m"
+	then
+		echo "Usage legit-commit [-a] -m commit-message"
+		exit
+	fi
+	# get commit message
+	msg="$2"
+elif [ "$#" -eq 3 ] # 3 args: (-a -m msg) or (-m msg -a)
+then
+	if [ "$1" = '-a' ] && [ "$2" = '-m' ]
+	then
+		have_a=1
+		msg="$3"
+	elif [ "$1" = '-m' ] && [ "$3" = '-a' ]
+	then
+		have_a=1
+		msg="$2"
+	else
+		echo "Usage legit-commit [-a] -m commit-message"
+		exit
+	fi
+else # the number of arguments are not correct
+	echo "Usage legit-commit [-a] -m commit-message"
+	exit
+fi
+
+#check -a option
+if [ "$have_a" = 1 ]
+then
+	f_index=`ls .legit/index | wc -l`
+	if [ "$f_index" != 0 ] 
+	then
+		for file in .legit/index/* # for each file in index, rm it first, if it exist in curr dir cp it else ignore it
+		do
+			rm "$file"
+			if test -f "${file##*/}" # check if the file exist in curr directory
+			then
+				cp "${file##*/}" .legit/index
+			fi	
+		done
+	fi
+fi
+
+# get last commit num
+num=`wc -l .legit/commit-log | cut -d' ' -f1`
+empty_index=0
+
+# check useful commit
+if [ $num != 0 ]
+then
+	prev_num=$((num - 1))
+	validcommit=0
+	
+	# check the num of file in index and last repo
+	f_index=`ls .legit/index | wc -l`
+	f_lrepo=`ls .legit/repo/"$prev_num" | wc -l`
+
+	if [ "$f_index" != "$f_lrepo" ] # num of file is not same, should commit
+	then
+		validcommit=1
+	fi
+
+	if [ "$f_index" = 0 ] # nothing in index
+	then
+		empty_index=1
+	else # check diff of files, if there are files in index
+		for file in .legit/index/*
+		do
+			if test -f .legit/repo/"$prev_num"/"${file##*/}" # check file in index is already include in last commit
+			then
+				DIFF=`diff $file .legit/repo/"$prev_num"/"${file##*/}"`
+				if [ "$DIFF" != "" ]
+				then
+					validcommit=1
+					break # some file is diff, the new commit is valid, no need check other files
+				fi
+			else
+				validcommit=1
+				break # file in index not in last commit, the new commit is valid, no need check other files
+			fi
+		done
+	fi
+
+	if [ "$validcommit" = 0 ] # invalid commit
+	then
+		echo "nothing to commit"
+		exit
+	fi
+else # no commit yet and index is empty
+	f_index=`ls .legit/index | wc -l`
+	if [ "$f_index" = 0 ] 
+	then
+		echo "nothing to commit"
+		exit
+	fi
+fi
+
+# valid commit
+mkdir .legit/repo/$num
+# clear the curr_branch
+curr_branch=`cat ".legit/branch-log"`
+rm -r .legit/branch/$curr_branch
+mkdir .legit/branch/$curr_branch
+
+if [ "$empty_index" = 0 ]
+then
+	cp .legit/index/* ".legit/repo/$num"
+	cp .legit/index/* ".legit/branch/$curr_branch"
+fi
+
+echo "$num $msg" >> .legit/commit-log
+
+#print the msg
+echo "Committed as commit $num"
+

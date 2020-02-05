@@ -1,0 +1,113 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+use File::Copy;
+use File::Basename;
+use File::Path;
+
+# check .legit directory
+if (!(-d ".legit")){
+	print "legit-branch: error: no .legit directory containing legit repository exists\n";
+	exit;
+}
+
+# check have commits
+if (!(-d ".legit/repo/0")){
+	print "legit-branch: error: your repository does not have any commits yet\n";
+	exit;
+}
+
+
+# check usage
+if (@ARGV == 0){ # option to show current brach names
+	my @files = glob(".legit/branch/*");
+	foreach my $file (sort(@files)){
+		my $file_name = fileparse("$file");
+		print "$file_name\n";
+	}
+}elsif(@ARGV == 1){ # option to create a branch
+	if ($ARGV[0] eq "-d"){
+		print "legit-branch: error: branch name required\n";
+		exit;
+	}
+	if ($ARGV[0] =~ /^[a-zA-Z0-9][a-zA-Z0-9.-_]*/){
+		if (-e ".legit/branch/$ARGV[0]"){
+			print "legit-branch: error: branch '$ARGV[0]' already exists\n"
+		}else{
+			CreatBranch($ARGV[0]);
+		}
+	}else{
+		if ($ARGV[0] =~ /^\-/){
+			print "usage: legit-branch [-d] <branch>\n";
+		}else{
+			print "legit-branch: error: invalid branch name '$ARGV[0]'\n";
+		}
+
+	}
+}elsif(@ARGV == 2 && $ARGV[0] eq "-d"){ # option to delete a branch
+	if ($ARGV[1] =~ /^[a-zA-Z0-9][a-zA-Z0-9.-_]*/){
+		if (-e ".legit/branch/$ARGV[1]"){
+			if ($ARGV[1] eq "master"){
+				print "legit-branch: error: can not delete branch 'master'\n"
+			}else{
+				DeleteBranch($ARGV[1]);
+			}
+		}else{
+			print "legit-branch: error: branch '$ARGV[1]' does not exist\n"
+		}
+	}else{
+		if ($ARGV[1] =~ /^-/){
+			print "usage: legit-branch [-d] <branch>\n";
+		}else{
+			print "legit-branch: error: invalid filename '$ARGV[1]'\n";
+		}
+	}
+}else{
+	print "usage: legit-branch [-d] <branch>\n";
+
+}
+
+sub CreatBranch {
+	my ($file) = @_;
+	my $newbranch = ".legit/branch/$file";
+	# my $newbranchroot = ".legit/branch/$file/root";
+	mkdir $newbranch;
+	# mkdir $newbranchroot;
+	# open branch-log 
+	open my $log_F, '<', ".legit/branch-log" or die "Can't opne branch-log: $!";
+	my @log_lines = <$log_F>;
+	close $log_F;
+	my $curr_branch = $log_lines[0];
+	# copy 
+	my @files = glob(".legit/branch/$curr_branch/*");
+	foreach my $file (@files){
+		copy($file, $newbranch) or die "Copy failed: #!";
+		# copy($file, $newbranchroot) or die "Copy failed: #!";
+	}
+}
+
+sub DeleteBranch {
+	my ($file) = @_;
+	my $dirname = ".legit/branch/$file";
+	# # check merge
+	my $merged = 1;
+	open my $log_F, '<', ".legit/commit-log" or die "Can't opne commit-log: $!";
+	my @log_lines = <$log_F>;
+	close $log_F;
+	my $last_commit = $#log_lines;
+	my @files = glob(".legit/branch/$file/*");
+	foreach my $file (@files){
+		my $file_name = fileparse("$file");
+		if ($file_name ne "root"){
+			if (!(-e ".legit/repo/$last_commit/$file_name")){
+				$merged = 0;
+			}
+		}
+	}
+	if ($merged == 1){
+		rmtree $dirname;
+		print "Deleted branch '$file'\n";
+	}else{
+		print "legit-branch: error: branch '$ARGV[0]' has unmerged changes\n"
+	}
+}

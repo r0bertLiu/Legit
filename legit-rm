@@ -1,0 +1,154 @@
+#!/bin/dash
+
+# check .legit directory
+if ! test -d .legit
+then
+	echo "legit-rm: error: no .legit directory containing legit repository exists"
+	exit
+fi
+# check have commit
+l=`ls .legit/repo/ | wc -l`
+
+if [ $l = 0 ]
+then
+	echo "legit-rm: error: your repository does not have any commits yet"
+	exit
+fi
+
+# check usage
+force=0
+cached=0
+for arg in $@
+do
+	if( echo $arg | egrep '^-' -q) # arg is command or invalid command
+	then
+		if [ "$arg" = '--force' ]
+		then
+			force=1
+		elif [ "$arg" = '--cached' ]
+		then
+			cached=1
+		else
+			echo "Usage: legit-rm [--force] [--cached] filename"    
+			exit
+		fi
+	else
+		if ! (echo "$arg" | egrep -wq '^[a-zA-Z0-9][a-zA-Z0-9.-_]*')
+		then
+			echo "legit-rm: error: invalid filename '$arg'"
+			exit 
+		fi
+	fi
+done
+
+# error check
+
+curr_diff=0
+index_diff=0
+num=`wc -l .legit/commit-log | cut -d' ' -f1`
+if [ $num = 0 ] #no commit yet
+then
+	echo "legit-rm: error: your repository does not have any commits yet"
+fi
+prev_num=$((num - 1))
+
+
+for file in $@
+do
+	# check arg is a filename
+	if [ "$file" = '--force' ]
+	then
+		continue
+	elif [ "$file" = '--cached' ]
+	then
+		continue
+	fi
+
+	# check existance of file in index & curr dir
+	if ! test -f .legit/index/"$file"
+	then
+		echo "legit-rm: error: '$file' is not in the legit repository"
+		exit
+	fi
+
+	if test -f "$file" # for the else case, the file not in working dir no further error check require
+	then
+		#if program can come here, means the file in exist in both curr dir and index
+		DIFF_curr_index=`diff $file .legit/index/"$file"`
+		if [ "$DIFF_curr_index" = "" ] # file in curr dir and index are same
+		then
+			if test -f .legit/repo/"$prev_num"/"$file" # file exist in last commit
+			then
+				DIFF_curr_commit=`diff $file .legit/repo/"$prev_num"/"$file"`
+				if [ "$DIFF_curr_commit" != "" ] # have diff between the file, rm with codition 
+				then
+					if [ "$force" = 0 ] # raise warning, not rm
+					then
+						if [ "$cached" = 0 ] # raise warning, not rm
+						then
+							echo "legit-rm: error: '$file' has changes staged in the index"
+							exit
+						fi
+					fi
+				fi
+			else # file not exist in last commit
+				if [ "$force" = 0 ] # raise warning, not rm
+				then
+					if [ "$cached" = 0 ] # raise warning, not rm
+					then
+						echo "legit-rm: error: '$file' has changes staged in the index"
+						exit
+					fi
+				fi
+			fi
+		else # file in curr dir and index are not same
+			if test -f .legit/repo/"$prev_num"/"$file" # file exist in last commit
+			then
+				DIFF_index_commit=`diff .legit/index/"$file" .legit/repo/"$prev_num"/"$file"`
+				if [ "$DIFF_index_commit" = "" ] # file at index and last commit are same, file in curr dir and last commit are diff
+				then 
+					if [ "$force" = 0 ] # raise warning, not rm
+					then
+						if [ "$cached" = 0 ] # raise warning, not rm
+						then
+							echo "legit-rm: error: '$file' in repository is different to working file"
+							exit
+						fi
+					fi
+				else
+					if [ "$force" = 0 ] # raise warning, not rm
+					then
+						# file at index and last commit are not same
+						echo "legit-rm: error: '$file' in index is different to both working file and repository"
+						exit
+					fi
+				fi
+			else # file not exist in last commit
+				if [ "$force" = 0 ] # raise warning, not rm
+				then
+					# file not in last repo, 
+					echo "legit-rm: error: '$file' in index is different to both working file and repository"
+					exit
+				fi
+			fi
+		fi
+	fi
+done
+
+# if program can come here means all filenames in args pass the error check and safe to be delete
+for file in $@
+do
+	# check arg is a filename
+	if [ "$file" = '--force' ]
+	then
+		continue
+	elif [ "$file" = '--cached' ]
+	then
+		continue
+	fi
+	rm .legit/index/"$file"
+	if [ "$cached" = 0 ]
+	then
+		rm "$file"
+	fi
+done

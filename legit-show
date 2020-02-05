@@ -1,0 +1,45 @@
+#!/bin/dash
+
+# check .legit directory
+if ! test -d .legit
+then
+	echo "legit-show: error: no .legit directory containing legit repository exists"
+	exit
+fi
+# check have commit
+l=`ls .legit/repo/ | wc -l`
+
+if [ $l = 0 ]
+then
+	echo "legit-show: error: your repository does not have any commits yet"
+	exit
+fi
+
+commit=`echo "$1" | cut -d':' -f1`
+file=`echo "$1" | cut -d':' -f2`
+
+if [ -z "$commit" ] 
+then
+	if test -f  .legit/index/"$file"
+	then
+		cat .legit/index/"$file"
+	else
+		echo "legit-show: error: '$file' not found in index"
+		exit 
+	fi
+else
+	if test -d .legit/repo/"$commit"
+	then
+		if test -f  .legit/repo/"$commit"/"$file"
+		then
+			cat .legit/repo/"$commit"/"$file"
+		else
+			echo "legit-show: error: '$file' not found in commit $commit"
+			exit 
+		fi
+	else
+		echo "legit-show: error: unknown commit '$commit'"
+		exit 
+	fi
+fi  
+ 

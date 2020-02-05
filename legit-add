@@ -1,0 +1,40 @@
+ #!/bin/dash
+
+# check .legit directory
+if ! test -d .legit
+then
+	echo "legit-add: error: no .legit directory containing legit repository exists"
+	exit
+fi
+
+# check usage
+if [ $# = '0' ]
+then
+	echo "usage: legit-add <filenames>"
+fi
+
+for file in "$@"
+do  
+	if ! (echo "$file" | egrep -wq '^[a-zA-Z0-9][a-zA-Z0-9.-_]*')
+	then
+		echo "legit-add: error: invalid filename '$file'"
+		exit 
+	fi
+
+	if ! test -f "$file" # check argument file exist in curr dir
+	then
+		if test -f .legit/index/"$file" # file not in working dir but in index
+		then
+			rm .legit/index/"$file"
+		else # file not in working dir and indx
+			echo "legit-add: error: can not open '$file'"
+		fi
+		exit
+	fi
+
+	if test -f .legit/index/"$file" # check exist in index
+	then
+		rm .legit/index/"$file"
+	fi
+	cp "$file" .legit/index
+done

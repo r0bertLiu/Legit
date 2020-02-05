@@ -1,0 +1,73 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+use File::Copy;
+use File::Basename;
+use File::Path;
+
+# check .legit directory
+if (!(-d ".legit")){
+	print "legit-checkout: error: no .legit directory containing legit repository exists\n";
+	exit;
+}
+
+# check have commits
+if (!(-d ".legit/repo/0")){
+	print "legit-checkout: error: your repository does not have any commits yet\n";
+	exit;
+}
+
+# check usage
+if (@ARGV == 1){ # option to show current brach names
+	if ($ARGV[0] =~ /^[a-zA-Z0-9][a-zA-Z0-9.-_]*/){
+		if (-e ".legit/branch/$ARGV[0]"){
+			SwitchBranch($ARGV[0]);
+		}else{
+			print "legit-checkout: error: unknown branch '$ARGV[0]'\n";
+		}
+	}else{
+		if ($ARGV[0] =~ /^-/){
+			print "usage: legit-checkout <branch>\n";
+		}else{
+			print "legit-checkout: error: invalid filename '$ARGV[0]'\n";
+		}
+	}
+}else{
+	print "usage: legit-checkout <branch>\n";
+}
+
+sub SwitchBranch {
+	my ($new_branch) = @_;
+	open my $log_F, '<', ".legit/branch-log" or die "Can't opne branch-log: $!";
+	my @log_lines = <$log_F>;
+	close $log_F;
+	my $curr_branch = $log_lines[0];
+	if ($curr_branch eq $new_branch){
+		print "Already on '$new_branch'\n";
+		exit;
+	}
+	my @curr_files = glob(".legit/branch/$curr_branch/*");
+	my @new_files = glob(".legit/branch/$new_branch/*");
+	# check files in new_branch
+	foreach my $file (@new_files){
+		# all file in new_branch should be copy(update) to cwd and index
+		my $file_name = fileparse("$file");
+		copy($file, $file_name) or die "Copy failed: #!";
+		copy($file, ".legit/index") or die "Copy failed: #!";
+	}
+	# check files in curr_branch
+	foreach my $file (@curr_files){
+		my $file_name = fileparse("$file");
+		if (!( -e ".legit/branch/$new_branch/$file_name")){
+			#if file in curr_branch does not in new_branch, it should be delete from cwd and index
+			unlink("$file_name");
+			unlink(".legit/index/$file_name");
+		}
+	}
+	# change the branch-log
+	unlink(".legit/branch-log");
+	open my $new_log_F, '>', ".legit/branch-log" or die "Can't opne branch-log: $!";
+	print $new_log_F "$new_branch";
+	print "Switched to branch '$new_branch'\n"
+}
+

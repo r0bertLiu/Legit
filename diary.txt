@@ -1,0 +1,14 @@
+Date		Start			Stop			Activity		Comments
+24/06/19	11:15			12:00			reading			understand the assignment
+24/06/19	15:20			18:00			coding			implemented Commands - Subset 0
+24/06/19	19:00			20:30			debugging		check implementation with reference implementation
+28/06/19	12:00			14:30			testing			testing with own test script
+28/06/19	14:30			16:30			testing			testing with 2041 auto test (add "nothing to commit") feature)
+30/06/19	23:30			00:15			coding			implemented legit-commit [-a]
+01/07/19	13:23			16:15			coding			implemented legit-rm
+01/07/19	16:15			19:50			coding			implemented legit-status
+02/07/19	10:15			11:50			debugging		check implementation with reference implementation
+02/07/19	12:00			14:50			testing			testing with 2041 auto test
+12/07/19	17:00			19:50			coding			write the test cases
+13/07/19	11:50			13:30			coding			implemented legit-branch
+13/07/19	14:30			18:50			coding			implemented legit-branch, legit-checkout

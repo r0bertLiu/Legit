@@ -1,0 +1,121 @@
+#!/bin/dash
+
+# check .legit directory
+if ! test -d .legit
+then
+	echo "legit-status: error: no .legit directory containing legit repository exists"
+	exit
+fi
+# check have commit
+l=`ls .legit/repo/ | wc -l`
+
+if [ $l = 0 ]
+then
+	echo "legit-status: error: your repository does not have any commits yet"
+	exit
+fi
+
+# check usage
+if [ $# -gt 0 ]
+then
+	echo "Usage legit-status"
+	exit
+fi
+
+echo -n > .legit/output
+
+# check have commit
+have_commit=0
+num=`wc -l .legit/commit-log | cut -d' ' -f1`
+if [ $num -gt 0 ] #have commit
+then
+	prev_num=$((num - 1))
+	have_commit=1
+fi
+
+# process the file in working dir if it is not empty
+f_curr=`ls | wc -l`
+if [ "$f_curr" != 0 ] 
+then
+	for file in *
+	do
+		if test -f .legit/index/"$file"
+		then
+			if [ "$have_commit" = 1 ] && test -f .legit/repo/"$prev_num"/"$file" # file exist in index and last commit
+			then
+				# need to check the similarity of file in working dir, index and last commit
+				DIFF_curr_index=`diff "$file" .legit/index/"$file"`
+				DIFF_curr_commit=`diff "$file" .legit/repo/"$prev_num"/"$file"`
+				DIFF_index_commit=`diff .legit/index/"$file" .legit/repo/"$prev_num"/"$file"`
+				if [ "$DIFF_curr_index" = "" ]
+				then
+					if [ "$DIFF_curr_commit" = "" ] # all file is same
+					then
+						echo "$file - same as repo" >> .legit/output
+					else #curr = index, curr != commit
+						echo "$file - file changed, changes staged for commit" >> .legit/output
+					fi
+				else
+					if [ "$DIFF_index_commit" = "" ] # curr != index, index = commit
+					then
+						echo "$file - file changed, changes not staged for commit" >> .legit/output
+					else #curr != index, index != commit
+						echo "$file - file changed, different changes staged for commit" >> .legit/output
+					fi
+				fi
+			else # file exist in index but not in last commit
+				echo "$file - added to index" >> .legit/output
+			fi
+		else # file not exist in index
+			echo "$file - untracked" >> .legit/output
+		fi	
+	done
+fi
+
+# process the file in index dir if index is not empty
+f_index=`ls .legit/index | wc -l`
+if [ "$f_index" != 0 ] 
+then
+	for file in .legit/index/*
+	do
+		if ! test -f "${file##*/}" # nothing to do with if file in curr dir, as it already be process at prev loop
+		then
+			if [ "$have_commit" = 1 ] && test -f .legit/repo/"$prev_num"/"${file##*/}" #
+			then 
+				DIFF_index_commit=`diff "$file" .legit/repo/"$prev_num"/"${file##*/}"`
+				if [ "$DIFF_index_commit" = "" ]
+				then
+					echo "${file##*/} - file deleted" >> .legit/output
+				else
+					echo "${file##*/} - file deleted, differen change staged commit" >> .legit/output
+				fi
+			else # file exist in index but not in working dir and last commit
+				echo "${file##*/} - added to index" >> .legit/output
+			fi
+		fi
+	done
+fi
+
+# process the file in last commit if not empty
+
+if [ "$have_commit" = 1 ]
+then
+	f_lrepo=`ls .legit/repo/"$prev_num" | wc -l`
+	if [ "$f_lrepo" != 0 ] 
+	then
+		for file in .legit/repo/"$prev_num"/*
+		do
+			if ! test -f "${file##*/}"
+			then
+				if ! test -f .legit/index/"${file##*/}" # file not in working dir and index
+				then
+					echo "${file##*/} - deleted" >> .legit/output
+				fi
+			fi
+		done
+	fi
+fi
+
+#print the .legit/output
+cat .legit/output | sort
+rm .legit/output	

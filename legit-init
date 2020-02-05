@@ -1,0 +1,23 @@
+#!/bin/dash
+
+if [ $# -gt 0 ]
+then
+	echo "Usage legit-init"
+	exit
+fi
+
+if [ -d ".legit" ]
+then
+	echo "legit-init: error: .legit already exists"
+	exit
+fi
+
+mkdir .legit
+cd .legit
+mkdir index
+mkdir repo
+mkdir branch
+mkdir branch/master
+echo -n > commit-log
+echo -n master > branch-log
+echo "Initialized empty legit repository in .legit"
