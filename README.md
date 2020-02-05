@@ -1,2 +1,2 @@
 # Legit
-A subset of the version control system Git
+## A subset of the version control system Git
