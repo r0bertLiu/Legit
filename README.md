@@ -9,5 +9,5 @@ legit-init: create initial files or directories inside .legit
 sample usage: 
 ```
 $ legit-init
-Initialized empty legit repository in .legit
+> Initialized empty legit repository in .legit
 ```
