@@ -79,3 +79,21 @@ $ ./legit-status
 - c.txt - untracked
 ```
 
+
+### legit-branch (-d) (*branch-name*): 
+legfit-branch either creates a branch, deletes a branch of lists current branch names
+sample usage:
+```
+$ ./legit-branch b1
+$ ./legit-branch
+- b1
+$ ./legit-branch -d b1
+```
+
+### legit-checkout branch-name
+legit-checkout switches branches
+sample usage:
+```
+$ ./legit-checkout b1
+- Switched to branch 'b1'
+```
